@@ -2607,26 +2607,86 @@ bkAuto();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(moveP
 </script>
  
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
   const URL = "https://wqilhiwvgjhjupaqiuub.supabase.co";
   const KEY = "sb_publishable_YrNRwYkWEPaFV80H8lvagw_zmUQPQbg";
   const db = window.supabase.createClient(URL, KEY);
 
+  let user = null;
   let applying = false;
   let lastUpdated = "";
   let saveTimer;
-
+  let pollTimer;
   const originalSet = Storage.prototype.setItem;
+
+  // صفحه ورود
+  const style = document.createElement("style");
+  style.textContent = `
+    #privateGate {
+      position:fixed; inset:0; z-index:999999;
+      display:flex; align-items:center; justify-content:center;
+      padding:20px; background:#101827; color:#fff;
+      font-family:Tahoma,Arial,sans-serif; direction:rtl;
+    }
+    #privateGate .login-card {
+      width:100%; max-width:360px; box-sizing:border-box;
+      padding:28px; border-radius:20px; background:#1e293b;
+      box-shadow:0 20px 60px #0006;
+    }
+    #privateGate h2 { margin-top:0; }
+    #privateGate p { color:#cbd5e1; line-height:1.9; }
+    #privateGate input, #privateGate button {
+      width:100%; box-sizing:border-box; padding:13px;
+      margin-top:12px; border-radius:10px; font-size:15px;
+    }
+    #privateGate input { border:1px solid #64748b; background:#fff; color:#111; }
+    #privateGate button { border:0; background:#60a5fa; color:#102033; font-weight:bold; cursor:pointer; }
+    #privateGate #gateMsg { color:#fca5a5; overflow-wrap:anywhere; }
+    #privateLogout {
+      position:fixed; z-index:99998; bottom:12px; left:12px;
+      padding:8px 12px; border-radius:10px; border:1px solid #888;
+      background:#fff; color:#222; cursor:pointer;
+    }
+  `;
+  document.head.appendChild(style);
+
+  const gate = document.createElement("div");
+  gate.id = "privateGate";
+  gate.innerHTML = `
+    <form class="login-card" id="gateForm">
+      <h2>🔐 ورود به پنل مطالعه</h2>
+      <p>برای دسترسی به برنامهٔ مطالعاتی، با حساب خودت وارد شو.</p>
+      <input id="gateEmail" type="email" placeholder="ایمیل" autocomplete="username" required>
+      <input id="gatePassword" type="password" placeholder="رمز عبور" autocomplete="current-password" required>
+      <button id="gateSubmit" type="submit">ورود به برنامه</button>
+      <p id="gateMsg" role="status"></p>
+    </form>`;
+  document.body.appendChild(gate);
+
+  const logout = document.createElement("button");
+  logout.id = "privateLogout";
+  logout.textContent = "خروج از حساب";
+  logout.hidden = true;
+  document.body.appendChild(logout);
+
+  function message(text) {
+    document.getElementById("gateMsg").textContent = text;
+  }
+
+  function hasData(data) {
+    return data && typeof data === "object" &&
+      Object.keys(data).length > 0;
+  }
 
   function applyRemote(data) {
     applying = true;
     try {
       if (typeof applyData === "function") {
         applyData(data);
-        originalSet.call(
-          localStorage, "studyplan", JSON.stringify(data)
-        );
+        originalSet.call(localStorage, "studyplan", JSON.stringify(data));
         if (typeof render === "function") render();
       }
     } finally {
@@ -2635,74 +2695,171 @@ bkAuto();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(moveP
   }
 
   async function upload(data) {
+    if (!user || applying) return;
+
     const { data: result, error } = await db
-      .from("studyplan_shared")
-      .update({
+      .from("studyplan_data")
+      .upsert({
+        user_id: user.id,
         data: data,
         updated_at: new Date().toISOString()
-      })
-      .eq("id", 1)
+      }, { onConflict: "user_id" })
       .select("updated_at")
       .single();
 
-    if (!error && result) lastUpdated = result.updated_at;
-    if (error) console.error("Sync error:", error.message);
-  }
-
-  Storage.prototype.setItem = function (key, value) {
-    originalSet.call(this, key, value);
-
-    if (key !== "studyplan" || applying) return;
-
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-      try {
-        upload(JSON.parse(value));
-      } catch (e) {
-        console.error("Could not sync study plan:", e);
-      }
-    }, 700);
-  };
-
-  async function start() {
-    const { data: row, error } = await db
-      .from("studyplan_shared")
-      .select("data, updated_at")
-      .eq("id", 1)
-      .single();
-
-    if (error || !row) {
-      console.error("Could not load shared data:", error);
+    if (error) {
+      console.error("Sync error:", error.message);
       return;
     }
+    if (result) lastUpdated = result.updated_at;
+  }
 
-    lastUpdated = row.updated_at || "";
+  function enableSync() {
+    Storage.prototype.setItem = function (key, value) {
+      originalSet.call(this, key, value);
+      if (key !== "studyplan" || applying || !user) return;
 
-    if (row.data && Object.keys(row.data).length > 0) {
-      applyRemote(row.data);
-    } else {
-      const local = localStorage.getItem("studyplan");
-      if (local) {
-        await upload(JSON.parse(local));
-      }
-    }
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () {
+        try {
+          upload(JSON.parse(value));
+        } catch (e) {
+          console.error("Could not sync study plan:", e);
+        }
+      }, 700);
+    };
 
-    setInterval(async function () {
-      const { data: fresh, error: pollError } = await db
-        .from("studyplan_shared")
+    clearInterval(pollTimer);
+    pollTimer = setInterval(async function () {
+      if (!user) return;
+
+      const { data: fresh, error } = await db
+        .from("studyplan_data")
         .select("data, updated_at")
-        .eq("id", 1)
-        .single();
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      if (pollError || !fresh || !fresh.updated_at) return;
+      if (error || !fresh || !fresh.updated_at) return;
 
       if (fresh.updated_at !== lastUpdated) {
         lastUpdated = fresh.updated_at;
-        if (fresh.data && Object.keys(fresh.data).length > 0) {
-          applyRemote(fresh.data);
-        }
+        if (hasData(fresh.data)) applyRemote(fresh.data);
       }
     }, 5000);
+  }
+
+  async function openForAccount(account) {
+    user = account;
+
+    // اول اطلاعات شخصی همین حساب را می‌خوانیم.
+    const { data: own, error: ownError } = await db
+      .from("studyplan_data")
+      .select("data, updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (ownError) {
+      user = null;
+      throw new Error("خواندن اطلاعات حساب ممکن نشد. تنظیمات دسترسی جدول را بررسی کن.");
+    }
+
+    if (own) {
+      lastUpdated = own.updated_at || "";
+      if (hasData(own.data)) applyRemote(own.data);
+    } else {
+      // انتقال یک‌باره اطلاعات قبلی به حساب شخصی
+      let initialData = null;
+
+      const { data: shared, error: sharedError } = await db
+        .from("studyplan_shared")
+        .select("data")
+        .eq("id", 1)
+        .maybeSingle();
+
+      if (!sharedError && shared && hasData(shared.data)) {
+        initialData = shared.data;
+      } else {
+        try {
+          const local = localStorage.getItem("studyplan");
+          if (local) initialData = JSON.parse(local);
+        } catch (_) {}
+      }
+
+      if (!initialData) initialData = {};
+
+      const { data: inserted, error: insertError } = await db
+        .from("studyplan_data")
+        .insert({
+          user_id: user.id,
+          data: initialData,
+          updated_at: new Date().toISOString()
+        })
+        .select("updated_at")
+        .single();
+
+      if (insertError) {
+        user = null;
+        throw new Error("ذخیرهٔ اولیه انجام نشد؛ اطلاعات قبلی را حذف نکن.");
+      }
+
+      lastUpdated = inserted.updated_at || "";
+      if (hasData(initialData)) applyRemote(initialData);
+    }
+
+    enableSync();
+    gate.style.display = "none";
+    logout.hidden = false;
+  }
+
+  document.getElementById("gateForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const button = document.getElementById("gateSubmit");
+    button.disabled = true;
+    button.textContent = "در حال ورود...";
+    message("");
+
+    try {
+      const email = document.getElementById("gateEmail").value.trim();
+      const password = document.getElementById("gatePassword").value;
+
+      const { data, error } = await db.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (error) throw error;
+      await openForAccount(data.user);
+    } catch (err) {
+      message(err.message || "ورود انجام نشد. ایمیل و رمز را بررسی کن.");
+    } finally {
+      button.disabled = false;
+      button.textContent = "ورود به برنامه";
+    }
+  });
+
+  logout.addEventListener("click", async function () {
+    clearTimeout(saveTimer);
+    clearInterval(pollTimer);
+    await db.auth.signOut();
+    user = null;
+    gate.style.display = "flex";
+    logout.hidden = true;
+    document.getElementById("gatePassword").value = "";
+    message("از حساب خارج شدی.");
+  });
+
+  async function start() {
+    try {
+      const { data, error } = await db.auth.getSession();
+      if (error) throw error;
+
+      if (data.session) {
+        await openForAccount(data.session.user);
+      }
+    } catch (err) {
+      message("ورود خودکار انجام نشد. ایمیل و رمز را وارد کن.");
+      console.error(err);
+    }
   }
 
   start();
