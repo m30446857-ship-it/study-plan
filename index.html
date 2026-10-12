@@ -2605,5 +2605,109 @@ bkAuto();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(moveP
 })();
 
 </script>
+ 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  const URL = "https://wqilhiwvgjhjupaqiuub.supabase.co";
+  const KEY = "sb_publishable_YrNRwYkWEPaFV80H8lvagw_zmUQPQbg";
+  const db = window.supabase.createClient(URL, KEY);
+
+  let applying = false;
+  let lastUpdated = "";
+  let saveTimer;
+
+  const originalSet = Storage.prototype.setItem;
+
+  function applyRemote(data) {
+    applying = true;
+    try {
+      if (typeof applyData === "function") {
+        applyData(data);
+        originalSet.call(
+          localStorage, "studyplan", JSON.stringify(data)
+        );
+        if (typeof render === "function") render();
+      }
+    } finally {
+      applying = false;
+    }
+  }
+
+  async function upload(data) {
+    const { data: result, error } = await db
+      .from("studyplan_shared")
+      .update({
+        data: data,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", 1)
+      .select("updated_at")
+      .single();
+
+    if (!error && result) lastUpdated = result.updated_at;
+    if (error) console.error("Sync error:", error.message);
+  }
+
+  Storage.prototype.setItem = function (key, value) {
+    originalSet.call(this, key, value);
+
+    if (key !== "studyplan" || applying) return;
+
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try {
+        upload(JSON.parse(value));
+      } catch (e) {
+        console.error("Could not sync study plan:", e);
+      }
+    }, 700);
+  };
+
+  async function start() {
+    const { data: row, error } = await db
+      .from("studyplan_shared")
+      .select("data, updated_at")
+      .eq("id", 1)
+      .single();
+
+    if (error || !row) {
+      console.error("Could not load shared data:", error);
+      return;
+    }
+
+    lastUpdated = row.updated_at || "";
+
+    if (row.data && Object.keys(row.data).length > 0) {
+      applyRemote(row.data);
+    } else {
+      const local = localStorage.getItem("studyplan");
+      if (local) {
+        await upload(JSON.parse(local));
+      }
+    }
+
+    setInterval(async function () {
+      const { data: fresh, error: pollError } = await db
+        .from("studyplan_shared")
+        .select("data, updated_at")
+        .eq("id", 1)
+        .single();
+
+      if (pollError || !fresh || !fresh.updated_at) return;
+
+      if (fresh.updated_at !== lastUpdated) {
+        lastUpdated = fresh.updated_at;
+        if (fresh.data && Object.keys(fresh.data).length > 0) {
+          applyRemote(fresh.data);
+        }
+      }
+    }, 5000);
+  }
+
+  start();
+})();
+</script>
+
 </body>
 </html>
