@@ -2624,189 +2624,109 @@ bkAuto();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(moveP
 
   // صفحه ورود
   const style = document.createElement("style");
-<CodeBlock language="css" editable>
+  style.textContent = `
     #privateGate {
-      position: fixed;
-      inset: 0;
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: auto;
-      padding: 24px;
-      box-sizing: border-box;
-      background:
-        radial-gradient(ellipse at 15% 15%, #2563eb35, transparent 42%),
-        radial-gradient(ellipse at 90% 85%, #7c3aed30, transparent 38%),
-        linear-gradient(135deg, #080e1c, #111b31 55%, #101426);
-      color: #f8fafc;
-      font-family: Tahoma, Arial, sans-serif;
-      direction: rtl;
-      isolation: isolate;
+      position:fixed; inset:0; z-index:999999;
+      display:flex; align-items:center; justify-content:center;
+      padding:20px; background:#101827; color:#fff;
+      font-family:Tahoma,Arial,sans-serif; direction:rtl;
     }
-#privateGate::before,
-    #privateGate::after {
-      content: "";
-      position: absolute;
-      width: 260px;
-      height: 260px;
-      border-radius: 50%;
-      filter: blur(75px);
-      opacity: .22;
-      pointer-events: none;
-      z-index: -1;
+    #privateGate .login-card {
+      width:100%; max-width:360px; box-sizing:border-box;
+      padding:28px; border-radius:20px; background:#1e293b;
+      box-shadow:0 20px 60px #0006;
     }
-#privateGate::before {
-      background: #3b82f6;
-      top: -100px;
-      right: -80px;
+    #privateGate h2 { margin-top:0; }
+    #privateGate p { color:#cbd5e1; line-height:1.9; }
+    #privateGate input, #privateGate button {
+      width:100%; box-sizing:border-box; padding:13px;
+      margin-top:12px; border-radius:10px; font-size:15px;
     }
-#privateGate::after {
-      background: #8b5cf6;
-      bottom: -110px;
-      left: -70px;
+    #privateGate input { border:1px solid #64748b; background:#fff; color:#111; }
+    #privateGate button { border:0; background:#60a5fa; color:#102033; font-weight:bold; cursor:pointer; }
+    #privateGate #gateMsg { color:#fca5a5; overflow-wrap:anywhere; }
+    #privateLogout {
+      position:fixed; z-index:99998; bottom:12px; left:12px;
+      padding:8px 12px; border-radius:10px; border:1px solid #888;
+      background:#fff; color:#222; cursor:pointer;
     }
-#privateGate .login-card {
-      position: relative;
-      width: 100%;
-      max-width: 390px;
-      box-sizing: border-box;
-      padding: 36px 30px 30px;
-      border-radius: 26px;
-      border: 1px solid #ffffff20;
-      background: linear-gradient(145deg, #ffffff12, #ffffff06);
-      box-shadow: 0 30px 90px #0007, inset 0 1px #ffffff18;
-      backdrop-filter: blur(22px);
-      -webkit-backdrop-filter: blur(22px);
-      animation: gateEnter .55s ease both;
-    }
-#privateGate .login-card::before {
-      content: "";
-      display: block;
-      width: 64px;
-      height: 64px;
-      margin: 0 auto 22px;
-      border-radius: 21px;
-      background: linear-gradient(135deg, #60a5fa, #6366f1 60%, #8b5cf6);
-      box-shadow: 0 10px 35px #6366f155;
-    }
-#privateGate .login-card::after {
-      content: "🔐";
-      position: absolute;
-      top: 48px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 29px;
-    }
-#privateGate h2 {
-      margin: 0 0 10px;
-      text-align: center;
-      font-size: 25px;
-      font-weight: 800;
-      letter-spacing: -.5px;
-      color: #fff;
-    }
-#privateGate p {
-      color: #b8c4d8;
-      line-height: 1.9;
-      font-size: 13px;
-      text-align: center;
-      margin: 0 0 22px;
-    }
-#privateGate input {
-      display: block;
-      width: 100%;
-      box-sizing: border-box;
-      padding: 15px 16px;
-      margin-top: 13px;
-      border-radius: 13px;
-      border: 1px solid #ffffff20;
-      background: #070d1b85;
-      color: #fff;
-      font-family: inherit;
-      font-size: 14px;
-      outline: none;
-      transition: border-color .2s, box-shadow .2s, background .2s;
-    }
-#privateGate input::placeholder {
-      color: #8795ad;
-    }
-#privateGate input:focus {
-      border-color: #60a5fa;
-      background: #0b1428;
-      box-shadow: 0 0 0 4px #3b82f622;
-    }
-#privateGate button {
-      display: block;
-      width: 100%;
-      box-sizing: border-box;
-      padding: 15px;
-      margin-top: 20px;
-      border: 0;
-      border-radius: 13px;
-      background: linear-gradient(110deg, #3b82f6, #6366f1 60%, #7c3aed);
-      color: #fff;
-      font-family: inherit;
-      font-size: 15px;
-      font-weight: 800;
-      cursor: pointer;
-      box-shadow: 0 10px 26px #4f46e540;
-      transition: transform .2s, filter .2s, box-shadow .2s;
-    }
-#privateGate button:hover {
-      filter: brightness(1.12);
-      transform: translateY(-2px);
-      box-shadow: 0 14px 32px #4f46e555;
-    }
-#privateGate button:active {
-      transform: translateY(0);
-    }
-#privateGate button:disabled {
-      opacity: .65;
-      cursor: wait;
-      transform: none;
-    }
-#privateGate #gateMsg {
-      min-height: 20px;
-      margin: 13px 0 0;
-      color: #fca5a5;
-      font-size: 12px;
-      overflow-wrap: anywhere;
-    }
-#privateLogout {
-      position: fixed;
-      z-index: 99998;
-      bottom: 14px;
-      left: 14px;
-      padding: 10px 14px;
-      border-radius: 12px;
-      border: 1px solid #ffffff30;
-      background: #111b31eF;
-      color: #fff;
-      font-family: Tahoma, Arial, sans-serif;
-      cursor: pointer;
-      box-shadow: 0 8px 25px #0003;
-    }
-#privateLogout:hover {
-      background: #243451;
-    }
-@keyframes gateEnter {
-      from { opacity: 0; transform: translateY(14px) scale(.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-@media (max-width: 480px) {
-      #privateGate { padding: 16px; }
-      #privateGate .login-card {
-        padding: 30px 22px 24px;
-        border-radius: 22px;
+  `;
+  document.head.appendChild(style);
+
+  const gate = document.createElement("div");
+  gate.id = "privateGate";
+  gate.innerHTML = `
+    <form class="login-card" id="gateForm">
+      <h2>🔐 ورود به پنل مطالعه</h2>
+      <p>برای دسترسی به برنامهٔ مطالعاتی، با حساب خودت وارد شو.</p>
+      <input id="gateEmail" type="email" placeholder="ایمیل" autocomplete="username" required>
+      <input id="gatePassword" type="password" placeholder="رمز عبور" autocomplete="current-password" required>
+      <button id="gateSubmit" type="submit">ورود به برنامه</button>
+      <p id="gateMsg" role="status"></p>
+    </form>`;
+  document.body.appendChild(gate);
+
+  const logout = document.createElement("button");
+  logout.id = "privateLogout";
+  logout.textContent = "خروج از حساب";
+  logout.hidden = true;
+  document.body.appendChild(logout);
+
+  function message(text) {
+    document.getElementById("gateMsg").textContent = text;
+  }
+
+  function hasData(data) {
+    return data && typeof data === "object" &&
+      Object.keys(data).length > 0;
+  }
+
+  function applyRemote(data) {
+    applying = true;
+    try {
+      if (typeof applyData === "function") {
+        applyData(data);
+        originalSet.call(localStorage, "studyplan", JSON.stringify(data));
+        if (typeof render === "function") render();
       }
-      #privateGate h2 { font-size: 23px; }
+    } finally {
+      applying = false;
     }
-@media (prefers-reduced-motion: reduce) {
-      #privateGate .login-card { animation: none; }
-      #privateGate button { transition: none; }
+  }
+
+  async function upload(data) {
+    if (!user || applying) return;
+
+    const { data: result, error } = await db
+      .from("studyplan_data")
+      .upsert({
+        user_id: user.id,
+        data: data,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "user_id" })
+      .select("updated_at")
+      .single();
+
+    if (error) {
+      console.error("Sync error:", error.message);
+      return;
     }
-</CodeBlock>
+    if (result) lastUpdated = result.updated_at;
+  }
+
+  function enableSync() {
+    Storage.prototype.setItem = function (key, value) {
+      originalSet.call(this, key, value);
+      if (key !== "studyplan" || applying || !user) return;
+
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () {
+        try {
+          upload(JSON.parse(value));
+        } catch (e) {
+          console.error("Could not sync study plan:", e);
+        }
+      }, 700);
     };
 
     clearInterval(pollTimer);
